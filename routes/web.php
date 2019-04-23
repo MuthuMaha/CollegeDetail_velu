@@ -12,9 +12,14 @@
 */
 
 Route::get('/', function () {
-    return view('auth/login');
+    return view('auth.login');
 });
 
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
+
+Route::group(['middleware' => ['auth'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
+    Route::get('staffs', 'CompaniesController@index')->name('staffs.index');
+    Route::get('students', 'CompaniesController@index1')->name('students.index');
+});
