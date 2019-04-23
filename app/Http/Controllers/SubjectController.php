@@ -8,6 +8,7 @@ use App\Student;
 use App\Attendance;
 use App\Note;
 use App\Assignment;
+use App\Fcmtoken;
 use App\Attendstudent;
 use App\Internalmark;
 use App\Internalstudentmark;
@@ -43,7 +44,7 @@ class SubjectController extends Controller
     {
         // return $request->dep_id;
         $res=DB::table('classyears')->where('department_id',$request->dep_id)->pluck('subject_ids');
-        $sub=Subject::whereIn('subject_code',explode(',',$res[0]))->select('subject_name','subject_code')->get();
+        $sub=Subject::whereIn('id',explode(',',$res[0]))->select('subject_name','id as subject_code')->get();
       // return [
       //                   'Login' => [
       //                       'response_message'=>"success",
@@ -104,6 +105,11 @@ class SubjectController extends Controller
        $u=Attendstudent::updateorcreate(           
       [  "attendance_id"=>$request->Attendance_id,  "student_id"=>$value],
     ["Attendance"=>$b[$key]]);
+       if($b[$key]==0){
+        $request->notify_type=4;
+        $request->stud_id=$value;
+        $call=Fcmtoken::sendmessage($request);
+       }
       }
       return [
                   'status'=>true,
@@ -122,6 +128,9 @@ class SubjectController extends Controller
         "student_id"=>$value],[
         "Obtained_Mark"=>$b[$key]]
       );
+        $request->notify_type=3;
+        $request->stud_id=$value;
+        $call=Fcmtoken::sendmessage($request);
       }
       return [
                   'status'=>true,
@@ -230,7 +239,9 @@ class SubjectController extends Controller
            'File_path'=>$f2.','.$fpath,
            'Description'=>$description,
         ]);
-
+        $request->notify_type=0;
+        $request->department_id=$department_id;
+        $call=Fcmtoken::sendmessage($request);
        }
        else
        {
@@ -244,7 +255,9 @@ class SubjectController extends Controller
           'subject_id'=>$subject_id, 
           'Filepath'=>$fpath, 
         ]);
-
+         $request->notify_type=1;
+        $request->department_id=$department_id;
+        $call=Fcmtoken::sendmessage($request);
 
        }
     
@@ -283,11 +296,11 @@ class SubjectController extends Controller
        
         
         $res= Note::join('departments as d','d.id','notes.department_id')
-          ->join('subjects as s','s.subject_code','notes.subject_id')->where([
+          ->join('subjects as s','s.id','notes.subject_id')->where([
           'notes.Unit'=>$unit, 
           'notes.department_id'=>$department_id, 
           'notes.subject_id'=>$subject_id, 
-        ])->get();
+        ])->distinct('notes.subject_id')->get();
 
 
        }
@@ -320,7 +333,7 @@ class SubjectController extends Controller
       // return Auth::id();
       return [
                   'status'=>true,
-                  'data'=>["details"=>['attendances'=>$res,'internalmarks'=>$res2]],
+                  'data'=>["details"=>['attendances'=>$res[0],'internalmarks'=>$res2]],
                   'displayMessage'=>"success",
               ];
     }
@@ -343,8 +356,14 @@ class SubjectController extends Controller
      * @param  \App\Subject  $subject
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Subject $subject)
-    {
-        //
+     public function sendmessage(Request $request){
+        $res=Fcmtoken::sendmessage($request);
+        return $res;
+
+    }
+    public function notifications(Request $request){
+        $res=Fcmtoken::notifications($request);
+        return $res;
+
     }
 }
